@@ -5,7 +5,9 @@ const interval = 120000;
 let snapshot = null,
   loading = false,
   lastCommit = null,
-  retryAt = 0;
+  retryAt = 0,
+  cachedFeed = false,
+  lastUpdateError = null;
 const labels = {
   resources: "Dependency lock",
   external_or_unknown: "External reservation / unknown",
@@ -125,18 +127,25 @@ function empty(target, message) {
 function freshness() {
   if (!snapshot) return;
   const n = stamp(snapshot.generated_at);
-  const seconds = n === null ? Infinity : (Date.now() - n) / 1000;
-  const stale = seconds > 240;
-  text("feed-state", stale ? "Snapshot stale" : "Live snapshot");
-  $("feed-state").className = `pill ${stale?"warning":"good"}`;
+  const stale = n === null || (Date.now() - n) / 1000 > 240;
+  text("feed-state", lastUpdateError ? "Update unavailable" : stale ? "Snapshot stale" : cachedFeed ? "Cached snapshot" : "Live snapshot");
+  $("feed-state").className = `pill ${stale || cachedFeed || lastUpdateError ? "warning" : "good"}`;
   text("updated", `Updated ${age(snapshot.generated_at)}`);
   text("snapshot-age", `Snapshot: ${date(snapshot.generated_at)}`);
-  if (stale) {
-    $("notice").hidden = false;
-    text("notice",
-      "This snapshot is older than four minutes. It may not reflect current progress; the last available data is shown."
-      );
+  updateNotice(stale);
+}
+
+function updateNotice(stale = false) {
+  const messages = (snapshot?.warnings || []).map(label);
+  if (lastUpdateError) {
+    messages.unshift(`${lastUpdateError}. ${snapshot ? "Showing the last available snapshot." : "Please try again shortly."}`);
   }
+  if (stale) {
+    messages.push("This snapshot is older than four minutes. It may not reflect current progress; the last available data is shown.");
+  }
+  if (cachedFeed) messages.push("Using the cached feed for updates. Updates may be delayed; check the snapshot time below.");
+  $("notice").hidden = !messages.length;
+  text("notice", messages.join(" · "));
 }
 
 function readiness(row) {
@@ -279,9 +288,14 @@ function definition(id, pairs) {
   for (const [k, v] of pairs) $(id).append(el("dt", k), el("dd", v == null ? "—" : v));
 }
 
-function render(data) {
-  if (data.schema_version !== 1 || !Array.isArray(data.rows) || !data.cycle || !data.counts) throw new Error(
+function validateSnapshot(data) {
+  if (!data || data.schema_version !== 1 || !Array.isArray(data.rows) || !data.cycle || !data.counts ||
+      stamp(data.generated_at) === null) throw new Error(
     "Unsupported status snapshot");
+}
+
+function render(data) {
+  validateSnapshot(data);
   snapshot = data;
   const c = data.counts,
     cy = data.cycle;
@@ -327,52 +341,62 @@ function render(data) {
     ["Outcome", label(prev.status)],
     ["Finished", date(prev.completed_at)]
   ]);
-  $("notice").hidden = !(data.warnings || []).length;
-  if (data.warnings?.length) text("notice", data.warnings.map(label).join(" · "));
   renderRows();
   renderBlockers();
   renderPromotions();
   freshness();
 }
 async function getJSON(url) {
-  const r = await fetch(url, {
-    cache: "no-store",
-    credentials: "omit",
-    signal: AbortSignal.timeout(20000)
-  });
+  const r = await fetch(url, {cache: "no-store", credentials: "omit", signal: AbortSignal.timeout(20000)});
   if (!r.ok) {
-    if (r.status === 403 || r.status === 429) {
+    if (url.startsWith("https://api.github.com/") && (r.status === 403 || r.status === 429)) {
       const reset = Number(r.headers.get("x-ratelimit-reset"));
-      retryAt = Number.isFinite(reset) && reset > 0 ? reset * 1000 : Date.now() + 600000;
+      retryAt = Number.isFinite(reset) && reset * 1000 > Date.now() ? reset * 1000 : Date.now() + 600000;
     }
     throw new Error(`Status request failed (${r.status})`);
   }
   return r.json();
 }
 async function refresh() {
-  if (loading || Date.now() < retryAt) return;
+  if (loading) return;
   loading = true;
   $("refresh").disabled = true;
   try {
-    let data;
+    let data, acceptedCommit = null, fromCache = false;
     if (location.hostname === "localhost" || location.hostname === "127.0.0.1") {
       data = await getJSON("status.json");
     } else {
-      const ref = await getJSON(`https://api.github.com/repos/${repository}/git/ref/heads/live`);
-      const sha = ref.object?.sha;
-      if (!/^[a-f0-9]{40}$/.test(sha || "")) throw new Error("Invalid status revision");
-      if (sha === lastCommit && snapshot) {
-        freshness();
-        return;
+      try {
+        if (Date.now() < retryAt) throw new Error("Revision lookup is backing off");
+        const ref = await getJSON(`https://api.github.com/repos/${repository}/git/ref/heads/live`);
+        const sha = ref.object?.sha;
+        if (!/^[a-f0-9]{40}$/.test(sha || "")) throw new Error("Invalid status revision");
+        if (sha === lastCommit && snapshot && !cachedFeed) {
+          lastUpdateError = null;
+          freshness();
+          return;
+        }
+        data = await getJSON(`https://raw.githubusercontent.com/${repository}/${sha}/status.json`);
+        acceptedCommit = sha;
+      } catch (_) {
+        data = await getJSON(`https://raw.githubusercontent.com/${repository}/live/status.json`);
+        fromCache = true;
       }
-      data = await getJSON(`https://raw.githubusercontent.com/${repository}/${sha}/status.json`);
-      lastCommit = sha;
+    }
+    validateSnapshot(data);
+    lastUpdateError = null;
+    if (snapshot && stamp(data.generated_at) < stamp(snapshot.generated_at)) {
+      cachedFeed = fromCache || cachedFeed;
+      freshness();
+      return;
     }
     render(data);
+    if (acceptedCommit) lastCommit = acceptedCommit;
+    cachedFeed = fromCache;
+    freshness();
   } catch (e) {
-    $("notice").hidden = false;
-    text("notice",
-      `${e.message}. ${snapshot?"Showing the last available snapshot.":"Please try again shortly."}`);
+    lastUpdateError = e.message;
+    updateNotice();
     text("feed-state", "Update unavailable");
     $("feed-state").className = "pill warning";
   } finally {
@@ -380,6 +404,7 @@ async function refresh() {
     $("refresh").disabled = false;
   }
 }
+
 $("refresh").addEventListener("click", refresh);
 for (const id of ["search", "status-filter", "area-filter", "scope-filter"]) $(id).addEventListener("input",
   renderRows);
