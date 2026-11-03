@@ -7,7 +7,7 @@
   <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.github.com https://raw.githubusercontent.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
   <title>SONiC · Babysitter</title>
   <link rel="stylesheet" href="styles.css">
-  <script src="app.js?v=0.4.2" defer></script>
+  <script src="app.js?v=a2c310a8a247" defer></script>
 </head>
 <body>
   <header><div class="brand"><span class="logo">S</span><span>SONiC <span class="divider">/</span> <strong>Babysitter</strong></span></div><a href="https://github.com/users/securely1g/projects/1/views/2" target="_blank" rel="noopener noreferrer">GitHub Project ↗</a></header>
@@ -29,7 +29,7 @@
       <div class="table-wrap"><table><thead><tr><th>Pull request</th><th>Audit</th><th>Readiness</th><th>Blocker / next action</th><th>Last activity</th></tr></thead><tbody id="pr-rows"></tbody></table></div>
       <p id="visibility" class="footnote"></p>
     </section>
-    <section id="blockers" class="tab-content" hidden><div class="section-title"><h2>What is holding up work?</h2><p>PR blockers and scheduling waits are shown separately.</p></div><div id="blocker-list" class="blocker-grid"></div></section>
+    <section id="blockers" class="tab-content" hidden><div class="section-title"><h2>Recorded blockers</h2><p>CI and dependency evidence comes from this cycle's collection and worker audits. Scheduling waits update live; each PR shows when its evidence was observed.</p></div><div id="blocker-list" class="blocker-grid"></div></section>
     <section id="ready" class="tab-content" hidden><div class="section-title"><h2>Verified Ready promotions</h2><p>A finished audit or an already-ready PR does not count as a promotion.</p></div><div id="promotions"></div></section>
     <section id="runtime" class="tab-content" hidden><div class="runtime-grid"><article class="panel"><h2>Current runtime</h2><dl id="runtime-values"></dl></article><article class="panel"><h2>Previous completed cycle</h2><dl id="previous-values"></dl></article></div><p class="footnote">Recent output is an activity signal. A quiet worker is not automatically considered failed.</p></section>
     <footer><span>Read-only status · updates every 2 minutes</span><span id="snapshot-age"></span></footer>

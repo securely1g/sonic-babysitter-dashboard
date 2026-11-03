@@ -195,6 +195,10 @@ function renderRows() {
       wait = r.runtime_wait || {};
     if (wait.kind && wait.kind !== "none") reason.append(el("div", label(wait.kind)));
     for (const b of r.blockers || []) reason.append(el("div", label(b.kind) + ": " + label(b.code)));
+    if ((r.blockers || []).some(b => b.kind === "ci")) reason.append(el("span",
+      `CI observed ${age(r.ci?.observed_at)}`, "muted"));
+    if ((r.blockers || []).some(b => b.kind === "dependency")) reason.append(el("span",
+      `Dependencies assessed ${age(r.readiness?.assessed_at)}`, "muted"));
     if (!(r.blockers || []).length && (!wait.kind || wait.kind === "none")) reason.append(el("div", label(r
       .next_action)));
     const refs = new Set([...(wait.blocking_prs || []), ...(r.blockers || []).flatMap(b => b.related_prs ||
