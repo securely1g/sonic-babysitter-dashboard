@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self'; style-src 'self'; connect-src 'self' https://api.github.com https://raw.githubusercontent.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+  <title>SONiC · Babysitter</title>
+  <link rel="stylesheet" href="styles.css">
+  <script src="app.js" defer></script>
+</head>
+<body>
+  <header><div class="brand"><span class="logo">S</span><span>SONiC <span class="divider">/</span> <strong>Babysitter</strong></span></div><a href="https://github.com/users/securely1g/projects/1/views/2" target="_blank" rel="noopener noreferrer">GitHub Project ↗</a></header>
+  <main>
+    <section class="heading"><div><p class="eyebrow">OPERATIONS</p><h1>Project progress.</h1><p class="subtitle">Live audit progress, dependencies, and verified Ready promotions.</p></div><div class="refresh"><span id="feed-state" class="pill neutral">Connecting</span><p id="updated">Waiting for the first snapshot</p><button id="refresh">Refresh now</button></div></section>
+    <div id="notice" class="notice" role="status" hidden></div>
+    <section class="cycle-panel" aria-label="Current cycle"><div class="cycle-top"><div><span class="eyebrow">CURRENT CYCLE</span><h2 id="cycle-phase">Loading…</h2></div><div class="cycle-meta"><span id="elapsed">—</span><span id="cycle-id">—</span></div></div><div class="progress" aria-hidden="true"><div id="progress-fill"></div></div><div class="progress-label"><span id="progress-text">Reading the latest status</span><span id="reuse-text"></span></div></section>
+    <section class="metrics" aria-label="Cycle metrics">
+      <article><span id="active-title">Workers active</span><strong id="active">—</strong><small>Running now</small></article>
+      <article><span>Queued</span><strong id="pending">—</strong><small>Waiting for execution</small></article>
+      <article><span>Audits finished</span><strong id="finished">—</strong><small>Includes all outcomes</small></article>
+      <article><span>Needs attention</span><strong id="attention">—</strong><small>Follow-up required</small></article>
+      <article><span>Failed audits</span><strong id="failed">—</strong><small>Eligible for retry</small></article>
+      <article class="ready-card"><span>Moved to Ready</span><strong id="ready-count">—</strong><small>Verified babysitter actions</small></article>
+    </section>
+    <nav class="tabs" aria-label="Dashboard sections"><button class="selected" data-tab="prs">Pull requests <span id="row-count"></span></button><button data-tab="blockers">Blockers <span id="blocker-count"></span></button><button data-tab="ready">Ready promotions</button><button data-tab="runtime">Runtime & history</button></nav>
+    <section id="prs" class="tab-content">
+      <div class="filters"><label class="search"><span class="sr-only">Search PRs</span><input id="search" type="search" placeholder="Search PR, title, or author…"></label><label><span class="sr-only">PR scope</span><select id="scope-filter"><option value="cycle">Current cycle</option><option value="all">All Project PRs</option></select></label><label><span class="sr-only">Audit status</span><select id="status-filter"><option value="">All audit states</option></select></label><label><span class="sr-only">Area</span><select id="area-filter"><option value="">All areas</option></select></label><span id="shown"></span></div>
+      <div class="table-wrap"><table><thead><tr><th>Pull request</th><th>Audit</th><th>Readiness</th><th>Blocker / next action</th><th>Last activity</th></tr></thead><tbody id="pr-rows"></tbody></table></div>
+      <p id="visibility" class="footnote"></p>
+    </section>
+    <section id="blockers" class="tab-content" hidden><div class="section-title"><h2>What is holding up work?</h2><p>PR blockers and scheduling waits are shown separately.</p></div><div id="blocker-list" class="blocker-grid"></div></section>
+    <section id="ready" class="tab-content" hidden><div class="section-title"><h2>Verified Ready promotions</h2><p>A finished audit or an already-ready PR does not count as a promotion.</p></div><div id="promotions"></div></section>
+    <section id="runtime" class="tab-content" hidden><div class="runtime-grid"><article class="panel"><h2>Current runtime</h2><dl id="runtime-values"></dl></article><article class="panel"><h2>Previous completed cycle</h2><dl id="previous-values"></dl></article></div><p class="footnote">Recent output is an activity signal. A quiet worker is not automatically considered failed.</p></section>
+    <footer><span>Read-only status · updates every 2 minutes</span><span id="snapshot-age"></span></footer>
+  </main>
+</body>
+</html>
